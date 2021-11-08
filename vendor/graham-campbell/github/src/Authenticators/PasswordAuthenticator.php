@@ -13,7 +13,7 @@ declare(strict_types=1);
 
 namespace GrahamCampbell\GitHub\Authenticators;
 
-use GitHub\Client;
+use Github\Client;
 use InvalidArgumentException;
 
 /**
@@ -21,7 +21,7 @@ use InvalidArgumentException;
  *
  * @author Graham Campbell <graham@alt-three.com>
  */
-class PasswordAuthenticator extends AbstractAuthenticator implements AuthenticatorInterface
+class PasswordAuthenticator extends AbstractAuthenticator
 {
     /**
      * Authenticate the client, and return it.

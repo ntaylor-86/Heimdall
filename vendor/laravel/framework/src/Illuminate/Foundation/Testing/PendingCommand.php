@@ -2,13 +2,14 @@
 
 namespace Illuminate\Foundation\Testing;
 
-use Mockery;
 use Illuminate\Console\OutputStyle;
 use Illuminate\Contracts\Console\Kernel;
-use Symfony\Component\Console\Input\ArrayInput;
-use PHPUnit\Framework\TestCase as PHPUnitTestCase;
-use Symfony\Component\Console\Output\BufferedOutput;
+use Mockery;
 use Mockery\Exception\NoMatchingExpectationException;
+use PHPUnit\Framework\TestCase as PHPUnitTestCase;
+use Symfony\Component\Console\Input\ArrayInput;
+use Symfony\Component\Console\Output\BufferedOutput;
+use Symfony\Component\Console\Output\Output;
 
 class PendingCommand
 {
@@ -22,7 +23,7 @@ class PendingCommand
     /**
      * The application instance.
      *
-     * @var \Illuminate\Foundation\Application
+     * @var \Illuminate\Contracts\Foundation\Application
      */
     protected $app;
 
@@ -58,7 +59,7 @@ class PendingCommand
      * Create a new pending console command run.
      *
      * @param  \PHPUnit\Framework\TestCase  $test
-     * @param  \Illuminate\Foundation\Application  $app
+     * @param  \Illuminate\Contracts\Foundation\Application  $app
      * @param  string  $command
      * @param  array  $parameters
      * @return void
@@ -130,10 +131,10 @@ class PendingCommand
     {
         $this->hasExecuted = true;
 
-        $this->mockConsoleOutput();
+        $mock = $this->mockConsoleOutput();
 
         try {
-            $exitCode = $this->app[Kernel::class]->call($this->command, $this->parameters);
+            $exitCode = $this->app[Kernel::class]->call($this->command, $this->parameters, $mock);
         } catch (NoMatchingExpectationException $e) {
             if ($e->getMethodName() === 'askQuestion') {
                 $this->test->fail('Unexpected question "'.$e->getActualArguments()[0]->getQuestion().'" was asked.');
@@ -155,7 +156,7 @@ class PendingCommand
     /**
      * Mock the application's console output.
      *
-     * @return void
+     * @return \Mockery\MockInterface
      */
     protected function mockConsoleOutput()
     {
@@ -180,6 +181,8 @@ class PendingCommand
         $this->app->bind(OutputStyle::class, function () use ($mock) {
             return $mock;
         });
+
+        return $mock;
     }
 
     /**

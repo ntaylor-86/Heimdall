@@ -13,7 +13,7 @@ declare(strict_types=1);
 
 namespace GrahamCampbell\GitHub\Authenticators;
 
-use GitHub\Client;
+use Github\Client;
 use InvalidArgumentException;
 
 /**
@@ -21,7 +21,7 @@ use InvalidArgumentException;
  *
  * @author Graham Campbell <graham@alt-three.com>
  */
-class ApplicationAuthenticator extends AbstractAuthenticator implements AuthenticatorInterface
+class ApplicationAuthenticator extends AbstractAuthenticator
 {
     /**
      * Authenticate the client, and return it.
@@ -42,7 +42,7 @@ class ApplicationAuthenticator extends AbstractAuthenticator implements Authenti
             throw new InvalidArgumentException('The application authenticator requires a client id and secret.');
         }
 
-        $this->client->authenticate($config['clientId'], $config['clientSecret'], Client::AUTH_URL_CLIENT_ID);
+        $this->client->authenticate($config['clientId'], $config['clientSecret'], Client::AUTH_CLIENT_ID);
 
         return $this->client;
     }

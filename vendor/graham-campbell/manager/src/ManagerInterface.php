@@ -25,6 +25,8 @@ interface ManagerInterface
      *
      * @param string|null $name
      *
+     * @throws \InvalidArgumentException
+     *
      * @return object
      */
     public function connection(string $name = null);
@@ -33,6 +35,8 @@ interface ManagerInterface
      * Reconnect to the given connection.
      *
      * @param string|null $name
+     *
+     * @throws \InvalidArgumentException
      *
      * @return object
      */
@@ -51,6 +55,8 @@ interface ManagerInterface
      * Get the configuration for a connection.
      *
      * @param string|null $name
+     *
+     * @throws \InvalidArgumentException
      *
      * @return array
      */
@@ -85,7 +91,7 @@ interface ManagerInterface
     /**
      * Return all of the created connections.
      *
-     * @return object[]
+     * @return array<string,object>
      */
     public function getConnections();
 }

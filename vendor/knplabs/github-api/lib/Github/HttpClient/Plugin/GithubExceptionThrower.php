@@ -9,6 +9,7 @@ use Github\Exception\TwoFactorAuthenticationRequiredException;
 use Github\Exception\ValidationFailedException;
 use Github\HttpClient\Message\ResponseMediator;
 use Http\Client\Common\Plugin;
+use Http\Promise\Promise;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 
@@ -18,10 +19,12 @@ use Psr\Http\Message\ResponseInterface;
  */
 class GithubExceptionThrower implements Plugin
 {
+    use Plugin\VersionBridgePlugin;
+
     /**
-     * {@inheritdoc}
+     * @return Promise
      */
-    public function handleRequest(RequestInterface $request, callable $next, callable $first)
+    public function doHandleRequest(RequestInterface $request, callable $next, callable $first)
     {
         return $next($request)->then(function (ResponseInterface $response) use ($request) {
             if ($response->getStatusCode() < 400 || $response->getStatusCode() > 600) {
@@ -31,8 +34,8 @@ class GithubExceptionThrower implements Plugin
             // If error:
             $remaining = ResponseMediator::getHeader($response, 'X-RateLimit-Remaining');
             if (null !== $remaining && 1 > $remaining && 'rate_limit' !== substr($request->getRequestTarget(), 1, 10)) {
-                $limit = ResponseMediator::getHeader($response, 'X-RateLimit-Limit');
-                $reset = ResponseMediator::getHeader($response, 'X-RateLimit-Reset');
+                $limit = (int) ResponseMediator::getHeader($response, 'X-RateLimit-Limit');
+                $reset = (int) ResponseMediator::getHeader($response, 'X-RateLimit-Reset');
 
                 throw new ApiLimitExceedException($limit, $reset);
             }
@@ -46,7 +49,7 @@ class GithubExceptionThrower implements Plugin
             $content = ResponseMediator::getContent($response);
             if (is_array($content) && isset($content['message'])) {
                 if (400 === $response->getStatusCode()) {
-                    throw new ErrorException($content['message'], 400);
+                    throw new ErrorException(sprintf('%s (%s)', $content['message'], $response->getReasonPhrase()), 400);
                 }
 
                 if (422 === $response->getStatusCode() && isset($content['errors'])) {
@@ -74,13 +77,18 @@ class GithubExceptionThrower implements Plugin
                                 break;
 
                             default:
-                                $errors[] = $error['message'];
+                                if (isset($error['message'])) {
+                                    $errors[] = $error['message'];
+                                }
                                 break;
 
                         }
                     }
 
-                    throw new ValidationFailedException('Validation Failed: '.implode(', ', $errors), 422);
+                    throw new ValidationFailedException(
+                        $errors ? 'Validation Failed: '.implode(', ', $errors) : 'Validation Failed',
+                        422
+                    );
                 }
             }
 

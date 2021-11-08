@@ -2,12 +2,12 @@
 
 namespace App;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Input;
 use Form;
-use Illuminate\Support\Facades\Auth;
 use App\User;
 use App\Search;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Request;
 
 class Setting extends Model
 {
@@ -42,8 +42,8 @@ class Setting extends Model
     public static function getInput()
     {
         return (object) [
-            'value' => Input::get('value'),
-            'image' => Input::file('value'),
+            'value' => Request::get('value'),
+            'image' => Request::file('value'),
         ];
     }
 

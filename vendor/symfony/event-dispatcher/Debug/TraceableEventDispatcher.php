@@ -13,12 +13,12 @@ namespace Symfony\Component\EventDispatcher\Debug;
 
 use Psr\EventDispatcher\StoppableEventInterface;
 use Psr\Log\LoggerInterface;
-use Symfony\Component\BrowserKit\Request;
 use Symfony\Component\EventDispatcher\Event;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\EventDispatcher\LegacyEventDispatcherProxy;
 use Symfony\Component\EventDispatcher\LegacyEventProxy;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Stopwatch\Stopwatch;
 use Symfony\Contracts\EventDispatcher\Event as ContractsEvent;
@@ -140,18 +140,18 @@ class TraceableEventDispatcher implements TraceableEventDispatcherInterface
         }
 
         $currentRequestHash = $this->currentRequestHash = $this->requestStack && ($request = $this->requestStack->getCurrentRequest()) ? spl_object_hash($request) : '';
-        $eventName = 1 < \func_num_args() ? \func_get_arg(1) : null;
+        $eventName = 1 < \func_num_args() ? func_get_arg(1) : null;
 
         if (\is_object($event)) {
             $eventName = $eventName ?? \get_class($event);
         } else {
-            @trigger_error(sprintf('Calling the "%s::dispatch()" method with the event name as first argument is deprecated since Symfony 4.3, pass it second and provide the event object first instead.', EventDispatcherInterface::class), E_USER_DEPRECATED);
+            @trigger_error(sprintf('Calling the "%s::dispatch()" method with the event name as first argument is deprecated since Symfony 4.3, pass it second and provide the event object first instead.', EventDispatcherInterface::class), \E_USER_DEPRECATED);
             $swap = $event;
             $event = $eventName ?? new Event();
             $eventName = $swap;
 
             if (!$event instanceof Event) {
-                throw new \TypeError(sprintf('Argument 1 passed to "%s::dispatch()" must be an instance of %s, %s given.', EventDispatcherInterface::class, Event::class, \is_object($event) ? \get_class($event) : \gettype($event)));
+                throw new \TypeError(sprintf('Argument 1 passed to "%s::dispatch()" must be an instance of "%s", "%s" given.', EventDispatcherInterface::class, Event::class, \is_object($event) ? \get_class($event) : \gettype($event)));
             }
         }
 
@@ -193,10 +193,10 @@ class TraceableEventDispatcher implements TraceableEventDispatcherInterface
             return [];
         }
 
-        $hash = 1 <= \func_num_args() && null !== ($request = \func_get_arg(0)) ? spl_object_hash($request) : null;
+        $hash = 1 <= \func_num_args() && null !== ($request = func_get_arg(0)) ? spl_object_hash($request) : null;
         $called = [];
         foreach ($this->callStack as $listener) {
-            list($eventName, $requestHash) = $this->callStack->getInfo();
+            [$eventName, $requestHash] = $this->callStack->getInfo();
             if (null === $hash || $hash === $requestHash) {
                 $called[] = $listener->getInfo($eventName);
             }
@@ -223,23 +223,23 @@ class TraceableEventDispatcher implements TraceableEventDispatcherInterface
             return [];
         }
 
-        $hash = 1 <= \func_num_args() && null !== ($request = \func_get_arg(0)) ? spl_object_hash($request) : null;
+        $hash = 1 <= \func_num_args() && null !== ($request = func_get_arg(0)) ? spl_object_hash($request) : null;
+        $calledListeners = [];
+
+        if (null !== $this->callStack) {
+            foreach ($this->callStack as $calledListener) {
+                [, $requestHash] = $this->callStack->getInfo();
+
+                if (null === $hash || $hash === $requestHash) {
+                    $calledListeners[] = $calledListener->getWrappedListener();
+                }
+            }
+        }
+
         $notCalled = [];
         foreach ($allListeners as $eventName => $listeners) {
             foreach ($listeners as $listener) {
-                $called = false;
-                if (null !== $this->callStack) {
-                    foreach ($this->callStack as $calledListener) {
-                        list(, $requestHash) = $this->callStack->getInfo();
-                        if ((null === $hash || $hash === $requestHash) && $calledListener->getWrappedListener() === $listener) {
-                            $called = true;
-
-                            break;
-                        }
-                    }
-                }
-
-                if (!$called) {
+                if (!\in_array($listener, $calledListeners, true)) {
                     if (!$listener instanceof WrappedListener) {
                         $listener = new WrappedListener($listener, null, $this->stopwatch, $this);
                     }
@@ -258,7 +258,7 @@ class TraceableEventDispatcher implements TraceableEventDispatcherInterface
      */
     public function getOrphanedEvents(/* Request $request = null */): array
     {
-        if (1 <= \func_num_args() && null !== $request = \func_get_arg(0)) {
+        if (1 <= \func_num_args() && null !== $request = func_get_arg(0)) {
             return $this->orphanedEvents[spl_object_hash($request)] ?? [];
         }
 
@@ -323,7 +323,7 @@ class TraceableEventDispatcher implements TraceableEventDispatcherInterface
     {
     }
 
-    private function preProcess($eventName)
+    private function preProcess(string $eventName)
     {
         if (!$this->dispatcher->hasListeners($eventName)) {
             $this->orphanedEvents[$this->currentRequestHash][] = $eventName;
@@ -341,7 +341,7 @@ class TraceableEventDispatcher implements TraceableEventDispatcherInterface
         }
     }
 
-    private function postProcess($eventName)
+    private function postProcess(string $eventName)
     {
         unset($this->wrappedListeners[$eventName]);
         $skipped = false;

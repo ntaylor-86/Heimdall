@@ -16,10 +16,13 @@ namespace GrahamCampbell\GitHub;
 use Github\Client;
 use GrahamCampbell\GitHub\Authenticators\AuthenticatorFactory;
 use GrahamCampbell\GitHub\Http\ClientBuilder;
+use GrahamCampbell\GitHub\Http\Psr16Cache;
 use Http\Client\Common\Plugin\RetryPlugin;
 use Illuminate\Contracts\Cache\Factory;
+use Illuminate\Support\Arr;
 use InvalidArgumentException;
-use Madewithlove\IlluminatePsrCacheBridge\Laravel\CacheItemPool;
+use Symfony\Component\Cache\Adapter\Psr16Adapter;
+use Symfony\Component\Cache\Adapter\SimpleCacheAdapter;
 
 /**
  * This is the github factory class.
@@ -29,6 +32,20 @@ use Madewithlove\IlluminatePsrCacheBridge\Laravel\CacheItemPool;
 class GitHubFactory
 {
     /**
+     * The minimum cache lifetime of 12 hours.
+     *
+     * @var int
+     */
+    const MIN_CACHE_LIFETIME = 43200;
+
+    /**
+     * The maximum cache lifetime of 48 hours.
+     *
+     * @var int
+     */
+    const MAX_CACHE_LIFETIME = 172800;
+
+    /**
      * The authenticator factory instance.
      *
      * @var \GrahamCampbell\GitHub\Authenticators\AuthenticatorFactory
@@ -36,7 +53,7 @@ class GitHubFactory
     protected $auth;
 
     /**
-     * The illuminate cache instance.
+     * The illuminate cache factory instance.
      *
      * @var \Illuminate\Contracts\Cache\Factory|null
      */
@@ -67,7 +84,7 @@ class GitHubFactory
      */
     public function make(array $config)
     {
-        $client = new Client($this->getBuilder($config), array_get($config, 'version'), array_get($config, 'enterprise'));
+        $client = new Client($this->getBuilder($config), Arr::get($config, 'version'), Arr::get($config, 'enterprise'));
 
         if (!array_key_exists('method', $config)) {
             throw new InvalidArgumentException('The github factory requires an auth method.');
@@ -91,14 +108,34 @@ class GitHubFactory
     {
         $builder = new ClientBuilder();
 
-        if ($backoff = array_get($config, 'backoff')) {
+        if ($backoff = Arr::get($config, 'backoff')) {
             $builder->addPlugin(new RetryPlugin(['retries' => $backoff === true ? 2 : $backoff]));
         }
 
-        if ($this->cache && class_exists(CacheItemPool::class) && $cache = array_get($config, 'cache')) {
-            $builder->addCache(new CacheItemPool($this->cache->store($cache === true ? null : $cache)));
+        if ($cache = Arr::get($config, 'cache')) {
+            $builder->addCache($this->getCacheAdapter($cache));
         }
 
         return $builder;
+    }
+
+    /**
+     * Get the symfony cache adapter for the given illuminate store.
+     *
+     * @param bool|string $name
+     *
+     * @return \Symfony\Component\Cache\Adapter\AdapterInterface
+     */
+    protected function getCacheAdapter($name)
+    {
+        if (!$this->cache) {
+            throw new InvalidArgumentException('Caching support not available.');
+        }
+
+        $store = $this->cache->store($name === true ? null : $name);
+
+        $repo = new Psr16Cache($store, self::MIN_CACHE_LIFETIME, self::MAX_CACHE_LIFETIME);
+
+        return class_exists(Psr16Adapter::class) ? new Psr16Adapter($repo) : new SimpleCacheAdapter($repo);
     }
 }

@@ -13,7 +13,7 @@ declare(strict_types=1);
 
 namespace GrahamCampbell\GitHub\Authenticators;
 
-use GitHub\Client;
+use Github\Client;
 use InvalidArgumentException;
 
 /**
@@ -22,7 +22,7 @@ use InvalidArgumentException;
  * @author Graham Campbell <graham@alt-three.com>
  * @author Lucas Michot <lucas@semalead.com>
  */
-class JwtAuthenticator extends AbstractAuthenticator implements AuthenticatorInterface
+class JwtAuthenticator extends AbstractAuthenticator
 {
     /**
      * Authenticate the client, and return it.

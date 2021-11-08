@@ -2,6 +2,7 @@
 
 namespace Github\Api;
 
+use Github\Api\Repository\Checks;
 use Github\Api\Repository\Collaborators;
 use Github\Api\Repository\Comments;
 use Github\Api\Repository\Commits;
@@ -11,6 +12,7 @@ use Github\Api\Repository\Downloads;
 use Github\Api\Repository\Forks;
 use Github\Api\Repository\Hooks;
 use Github\Api\Repository\Labels;
+use Github\Api\Repository\Pages;
 use Github\Api\Repository\Projects;
 use Github\Api\Repository\Protection;
 use Github\Api\Repository\Releases;
@@ -62,7 +64,7 @@ class Repo extends AbstractApi
             return $this->get('/repositories');
         }
 
-        return $this->get('/repositories?since='.rawurldecode($id));
+        return $this->get('/repositories', ['since' => $id]);
     }
 
     /**
@@ -169,7 +171,7 @@ class Repo extends AbstractApi
      */
     public function showById($id)
     {
-        return $this->get('/repositories/'.rawurlencode($id));
+        return $this->get('/repositories/'.$id);
     }
 
     /**
@@ -308,6 +310,18 @@ class Repo extends AbstractApi
     public function commits()
     {
         return new Commits($this->client);
+    }
+
+    /**
+     * Manage checks on a repository.
+     *
+     * @link https://developer.github.com/v3/checks/
+     *
+     * @return Checks
+     */
+    public function checks()
+    {
+        return new Checks($this->client);
     }
 
     /**
@@ -576,12 +590,13 @@ class Repo extends AbstractApi
     /**
      * @param string $username
      * @param string $repository
+     * @param array  $parameters
      *
      * @return array
      */
-    public function milestones($username, $repository)
+    public function milestones($username, $repository, array $parameters = [])
     {
-        return $this->get('/repos/'.rawurldecode($username).'/'.rawurldecode($repository).'/milestones');
+        return $this->get('/repos/'.rawurldecode($username).'/'.rawurldecode($repository).'/milestones', $parameters);
     }
 
     public function projects()
@@ -592,6 +607,11 @@ class Repo extends AbstractApi
     public function traffic()
     {
         return new Traffic($this->client);
+    }
+
+    public function pages()
+    {
+        return new Pages($this->client);
     }
 
     /**
@@ -606,6 +626,24 @@ class Repo extends AbstractApi
     public function events($username, $repository, $page = 1)
     {
         return $this->get('/repos/'.rawurldecode($username).'/'.rawurldecode($repository).'/events', ['page' => $page]);
+    }
+
+    /**
+     * Get the community profile metrics for a repository.
+     *
+     * @link https://developer.github.com/v3/repos/community/#retrieve-community-profile-metrics
+     *
+     * @param string $username
+     * @param string $repository
+     *
+     * @return array
+     */
+    public function communityProfile($username, $repository)
+    {
+        //This api is in preview mode, so set the correct accept-header
+        $this->acceptHeaderValue = 'application/vnd.github.black-panther-preview+json';
+
+        return $this->get('/repos/'.rawurldecode($username).'/'.rawurldecode($repository).'/community/profile');
     }
 
     /**
@@ -677,9 +715,6 @@ class Repo extends AbstractApi
      */
     public function transfer($username, $repository, $newOwner, $teamId = [])
     {
-        //This api is in preview mode, so set the correct accept-header
-        $this->acceptHeaderValue = 'application/vnd.github.nightshade-preview+json';
-
         return $this->post('/repos/'.rawurldecode($username).'/'.rawurldecode($repository).'/transfer', ['new_owner' => $newOwner, 'team_id' => $teamId]);
     }
 }
